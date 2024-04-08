@@ -9,6 +9,7 @@ class TaskManagerGUI:
         self.root = root
         self.root.title("Process Manager")
         self.root.iconphoto(True, tk.PhotoImage(file="C:\\Users\\chess\\OneDrive\\Desktop\\Task-Manager\\icon.png"))
+        self.default_bg = "#1e1e2e"
         
 
         self.process_tree = ttk.Treeview(root, columns=("PID", "Name", "Username", "Status", "Memory (%)", "CPU (%)"))
@@ -117,7 +118,10 @@ class TaskManagerGUI:
     
 def main():
     root = tk.Tk()
+    root.geometry("800x600")
     TaskManagerGUI(root)
+    
+    
     root.mainloop()
 
 if __name__ == "__main__":
