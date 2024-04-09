@@ -2,7 +2,6 @@ import psutil
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox
-from tkinter import *
 
 class TaskManagerGUI:
     def __init__(self, root):
@@ -11,6 +10,13 @@ class TaskManagerGUI:
         self.root.iconphoto(True, tk.PhotoImage(file="C:\\Users\\chess\\OneDrive\\Desktop\\Task-Manager\\icon.png"))
         self.default_bg = "#1e1e2e"
         
+        # Set the background color of the root window
+        self.root.configure(background="#1e1e2e")
+
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+        self.style.configure("Treeview", background="#1e1e2e", foreground="white", fieldbackground="#1e1e2e", highlightthickness=0)
+        self.style.map("Treeview", background=[("selected", "#CBA6F7")],foreground=[("selected", "black")])
 
         self.process_tree = ttk.Treeview(root, columns=("PID", "Name", "Username", "Status", "Memory (%)", "CPU (%)"))
         self.process_tree.heading("#0", text="PID")
@@ -27,35 +33,39 @@ class TaskManagerGUI:
         self.process_tree.column("#5", width=100)
         self.process_tree.pack(expand=True, fill=tk.BOTH)
 
-        search_frame = tk.Frame(root)
+        search_frame = tk.Frame(root, bg="#1e1e2e")
         search_frame.pack(pady=5)
 
-        self.search_label = tk.Label(search_frame, text="Search PID:",fg="white", bg="#1e1e2e")
+        self.search_label = tk.Label(search_frame, text="Search Process:", fg="white", bg="#1e1e2e")
         self.search_label.pack(side=tk.LEFT, padx=5)
 
-        self.search_entry = tk.Entry(search_frame,fg="white", bg="#1e1e2e")
+        self.search_entry = tk.Entry(search_frame, fg="white", bg="#313244", insertbackground="white")
         self.search_entry.pack(side=tk.LEFT, padx=5)
 
-        self.search_button = tk.Button(search_frame, text="Search",fg="white", bg="#1e1e2e", command=self.search_process)
+        self.search_button = tk.Button(search_frame, text="Search", fg="white", bg="#1e1e2e", command=self.search_process)
         self.search_button.pack(side=tk.LEFT, padx=5)
 
-        button_frame = tk.Frame(root)
+        button_frame = tk.Frame(root, bg="#1e1e2e")
         button_frame.pack(pady=5)
 
-        self.kill_button = tk.Button(button_frame, text="End Task", fg="white", bg="#1e1e2e",command=self.kill_process)
+        self.kill_button = tk.Button(button_frame, text="End Task", fg="white", bg="#1e1e2e", command=self.kill_process)
         self.kill_button.pack(side=tk.LEFT, padx=5)
 
-        self.refresh_button = tk.Button(button_frame, text="Refresh", fg="white", bg="#1e1e2e",command=self.update_processes)
+        self.refresh_button = tk.Button(button_frame, text="Refresh", fg="white", bg="#1e1e2e", command=self.update_processes)
         self.refresh_button.pack(side=tk.LEFT, padx=5)
 
         self.last_process_info = {}  # Store last known memory and CPU percentages
         self.update_processes()  # Initial update
         self.schedule_update()  # Start real-time updating
-        self.root.configure(background="#1e1e2e")
-        
 
     def update_processes(self):
+        selected_item = self.process_tree.selection()
+        selected_pid = None
+        if selected_item:
+            selected_pid = int(self.process_tree.item(selected_item, "text"))
+        
         self.process_tree.delete(*self.process_tree.get_children())
+        
         for proc in psutil.process_iter(['pid', 'name', 'username', 'status', 'memory_percent', 'cpu_percent']):
             pid = proc.info['pid']
             memory_percent = proc.info['memory_percent']
@@ -72,6 +82,14 @@ class TaskManagerGUI:
 
                 # Update last known memory and CPU percentages
                 self.last_process_info[pid] = (memory_percent, cpu_percent)
+        
+        if selected_pid:
+            for item in self.process_tree.get_children():
+                if self.process_tree.item(item, "text") == str(selected_pid):
+                    self.process_tree.selection_set(item)
+                    self.process_tree.focus(item)
+                    self.process_tree.see(item)
+                    break
 
     def kill_process(self):
         selected_item = self.process_tree.selection()
@@ -101,15 +119,17 @@ class TaskManagerGUI:
     def search_process(self):
         search_text = self.search_entry.get().strip()
         if search_text:
+            found = False
             for item in self.process_tree.get_children():
-                pid = self.process_tree.item(item, "text")
-                if search_text == pid:
+                name = self.process_tree.item(item, "values")[0]  # Get process name
+                if search_text.lower() in name.lower():  # Case insensitive search
                     self.process_tree.selection_set(item)
                     self.process_tree.focus(item)
                     self.process_tree.see(item)
+                    found = True
                     break
-            else:
-                tkinter.messagebox.showerror("Search Result", f"No process with PID '{search_text}' found.")
+            if not found:
+                tkinter.messagebox.showerror("Search Result", f"No process with name '{search_text}' found.")
 
     def schedule_update(self):
         self.update_processes()
@@ -120,9 +140,8 @@ def main():
     root = tk.Tk()
     root.geometry("800x600")
     TaskManagerGUI(root)
-    
-    
     root.mainloop()
 
 if __name__ == "__main__":
     main()
+
