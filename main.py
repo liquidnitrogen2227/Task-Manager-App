@@ -46,15 +46,20 @@ class TaskManagerGUI:
 
         self.search_button = tk.Button(search_frame, text="Search", fg="white", bg="#1e1e2e", command=self.search_process)
         self.search_button.pack(side=tk.LEFT, padx=5)
+        self.search_entry.bind("<Return>", lambda event: self.search_process())  # Bind Enter key to search function
+
 
         button_frame = tk.Frame(root, bg="#1e1e2e")
         button_frame.pack(pady=5)
 
         self.kill_button = tk.Button(button_frame, text="End Task", fg="white", bg="#1e1e2e", command=self.kill_process)
         self.kill_button.pack(side=tk.LEFT, padx=5)
+        self.root.bind("<Control-k>", lambda event: self.kill_process())  # Bind Ctrl + K to kill process function
+
 
         self.refresh_button = tk.Button(button_frame, text="Refresh", fg="white", bg="#1e1e2e", command=self.update_processes)
         self.refresh_button.pack(side=tk.LEFT, padx=5)
+        self.root.bind("<Control-r>", lambda event: self.update_processes())
 
         self.last_process_info = {}  # Store last known memory and CPU percentages
         self.update_processes()  # Initial update
