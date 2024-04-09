@@ -31,6 +31,8 @@ class TaskManagerGUI:
         self.process_tree.column("#3", width=100)
         self.process_tree.column("#4", width=100)
         self.process_tree.column("#5", width=100)
+        self.style.configure("Treeview.Heading", background="#313344", foreground="white",bordercolor="#313344")
+        self.style.map("Treeview.Heading", background=[("active", "#313344")],bordercolor=[("active", "#313344")])
         self.process_tree.pack(expand=True, fill=tk.BOTH)
 
         search_frame = tk.Frame(root, bg="#1e1e2e")
