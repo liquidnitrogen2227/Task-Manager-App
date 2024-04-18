@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox
 
+
 class TaskManagerGUI:
     def __init__(self, root):
         self.root = root
@@ -18,19 +19,21 @@ class TaskManagerGUI:
         self.style.configure("Treeview", background="#1e1e2e", foreground="white", fieldbackground="#1e1e2e", highlightthickness=0)
         self.style.map("Treeview", background=[("selected", "#CBA6F7")],foreground=[("selected", "black")])
 
-        self.process_tree = ttk.Treeview(root, columns=("PID", "Name", "Username", "Status", "Memory (%)", "CPU (%)"))
+        self.process_tree = ttk.Treeview(root, columns=("PID", "Name", "Username", "Status", "Memory (%)", "CPU (%)") )
         self.process_tree.heading("#0", text="PID")
         self.process_tree.heading("#1", text="Name")
         self.process_tree.heading("#2", text="Username")
         self.process_tree.heading("#3", text="Status")
         self.process_tree.heading("#4", text="Memory (%)")
         self.process_tree.heading("#5", text="CPU (%)")
-        self.process_tree.column("#0", width=100)
-        self.process_tree.column("#1", width=200)
-        self.process_tree.column("#2", width=150)
-        self.process_tree.column("#3", width=100)
-        self.process_tree.column("#4", width=100)
-        self.process_tree.column("#5", width=100)
+        self.process_tree.column("#0", width=100,minwidth=100, stretch=tk.NO)
+        self.process_tree.column("#1", width=200,minwidth=100, stretch=tk.NO)
+        self.process_tree.column("#2", width=150,minwidth=100, stretch=tk.NO)
+        self.process_tree.column("#3", width=100,minwidth=100, stretch=tk.NO)
+        self.process_tree.column("#4", width=100,minwidth=100, stretch=tk.NO)
+        self.process_tree.column("#5", width=100,minwidth=100, stretch=tk.NO)
+        self.style.configure("Treeview",font=("Arial", 10))
+        self.style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
         self.style.configure("Treeview.Heading", background="#313344", foreground="white",bordercolor="#313344")
         self.style.map("Treeview.Heading", background=[("active", "#313344")],bordercolor=[("active", "#313344")])
         self.process_tree.pack(expand=True, fill=tk.BOTH)
@@ -46,6 +49,7 @@ class TaskManagerGUI:
 
         self.search_button = tk.Button(search_frame, text="Search", fg="white", bg="#1e1e2e", command=self.search_process)
         self.search_button.pack(side=tk.LEFT, padx=5)
+        self.style.configure("TButton", font=("Arial", 10))
         self.search_entry.bind("<Return>", lambda event: self.search_process())  # Bind Enter key to search function
 
 
@@ -142,12 +146,12 @@ class TaskManagerGUI:
         self.update_processes()
         self.root.after(15000, self.schedule_update)  
         
-    
 def main():
     root = tk.Tk()
     root.geometry("800x600")
     TaskManagerGUI(root)
     root.mainloop()
+    style= ttk.Style()
 
 if __name__ == "__main__":
     main()
