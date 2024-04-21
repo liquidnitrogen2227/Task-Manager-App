@@ -106,16 +106,37 @@ class TaskManagerGUI:
         selected_item = self.process_tree.selection()
         if selected_item:
             pid = int(self.process_tree.item(selected_item, "text"))
-            if not self.is_system_process(pid):
+            try:
                 process = psutil.Process(pid)
-                process.terminate()
-                self.update_processes()
-            else:
-                tkinter.messagebox.showerror("Error", "Cannot terminate system processes.")
+                if not self.is_system_process(pid):
+                    process.terminate()
+                    self.update_processes()
+                else:
+                    tkinter.messagebox.showerror("Error", "Cannot terminate system processes.")
+            except psutil.NoSuchProcess:
+                tkinter.messagebox.showerror("Error", "The selected process no longer exists.")
+            except psutil.AccessDenied:
+                tkinter.messagebox.showerror("Error", "Access denied. You may not have sufficient privileges.")
 
     def is_system_process(self, pid):
         # Check if the process name is in a list of system processes
         system_processes = ["System", "Idle"]
+        process_name = self.get_process_name(pid)
+        if process_name in system_processes:
+            return True
+        return False
+    
+    def is_system_process(self, pid):
+        # Check if the process name is in a list of system processes
+        system_processes = ["None", "Idle"]
+        process_name = self.get_process_name(pid)
+        if process_name in system_processes:
+            return True
+        return False
+    
+    def is_unknown_process(self, pid):
+        # Check if the process name is in a list of system processes
+        system_processes = ["None", "Idle"]
         process_name = self.get_process_name(pid)
         if process_name in system_processes:
             return True
