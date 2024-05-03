@@ -10,7 +10,11 @@ class TaskManagerGUI:
         self.root.title("Process Manager")
         self.root.iconphoto(True, tk.PhotoImage(file="C:\\Users\\chess\\OneDrive\\Desktop\\Task-Manager\\icon.png"))
         self.default_bg = "#1e1e2e"
-           
+        
+        self.notebook = ttk.Notebook(root)
+        self.performance_tab = ttk.Frame(self.notebook)
+    
+        
         # Set the background color of the root window
         self.root.configure(background="#1e1e2e")
 
@@ -47,7 +51,11 @@ class TaskManagerGUI:
         self.search_entry = tk.Entry(search_frame, fg="white", bg="#313244", insertbackground="white")
         self.search_entry.pack(side=tk.LEFT, padx=5)
 
-        self.search_entry.bind("<KeyRelease>", lambda event: self.search_process())  # Bind key release to search function
+        self.search_button = tk.Button(search_frame, text="Search", fg="white", bg="#1e1e2e", command=self.search_process)
+        self.search_button.pack(side=tk.LEFT, padx=5)
+        self.style.configure("TButton", font=("Arial", 10))
+        self.search_entry.bind("<Return>", lambda event: self.search_process())  # Bind Enter key to search function
+
 
         button_frame = tk.Frame(root, bg="#1e1e2e")
         button_frame.pack(pady=5)
@@ -56,6 +64,7 @@ class TaskManagerGUI:
         self.kill_button.pack(side=tk.LEFT, padx=5)
         self.root.bind("<Control-k>", lambda event: self.kill_process())  # Bind Ctrl + K to kill process function
 
+
         self.refresh_button = tk.Button(button_frame, text="Refresh", fg="white", bg="#1e1e2e", command=self.update_processes)
         self.refresh_button.pack(side=tk.LEFT, padx=5)
         self.root.bind("<Control-r>", lambda event: self.update_processes())
@@ -63,10 +72,27 @@ class TaskManagerGUI:
         self.last_process_info = {}  # Store last known memory and CPU percentages
         self.update_processes()  # Initial update
         self.schedule_update()  # Start real-time updating
+    
+    def on_double_click(self, event):
+        # Get the selected process
+        selected_item = self.tree.selection()[0]
+        pid = self.tree.item(selected_item, "values")[0]
 
-        # Event binding for double-click to show child processes
-        self.process_tree.bind("<Double-1>", self.show_child_processes)
+        # Get the child processes of the selected process
+        try:
+            parent = psutil.Process(int(pid))
+            children = parent.children(recursive=True)
+        except psutil.NoSuchProcess:
+            return
 
+        # Clear the Treeview
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+
+        # Add the child processes to the Treeview
+        for child in children:
+            self.tree.insert("", "end", values=(child.pid, child.name))
+            
     def update_processes(self):
         selected_item = self.process_tree.selection()
         selected_pid = None
@@ -86,10 +112,8 @@ class TaskManagerGUI:
                 username = proc.info['username']
                 status = proc.info['status']
 
-                # Check if the process is a parent process
-                if self.is_parent_process(pid):
-                    values = (process_name, username, status, f"{memory_percent:.2f}", f"{cpu_percent:.2f}")
-                    self.process_tree.insert("", tk.END, text=str(pid), values=values)
+                values = ( process_name, username, status, f"{memory_percent:.2f}", f"{cpu_percent:.2f}")
+                self.process_tree.insert("", tk.END, text=str(pid), values=values)
 
                 # Update last known memory and CPU percentages
                 self.last_process_info[pid] = (memory_percent, cpu_percent)
@@ -101,32 +125,6 @@ class TaskManagerGUI:
                     self.process_tree.focus(item)
                     self.process_tree.see(item)
                     break
-
-    def show_child_processes(self, event):
-        item = self.process_tree.focus()
-        pid = int(self.process_tree.item(item,"text")) 
-        
-        if self.is_parent_process(pid):
-            self.process_tree.delete(*self.process_tree.get_children(item))  # Clear previous child processes
-            children = list(psutil.Process(pid).children(recursive=True)) 
-            if children:
-                for child in children:
-                    child_pid = child.pid
-                    memory_percent = child.memory_percent()
-                    cpu_percent = child.cpu_percent()  
-                    
-                    try:
-                        username = child.username()
-                    except psutil.AccessDenied:
-                        username = "N/A" 
-                    
-                    values = (child.name(), username, child.status(), f"{memory_percent:.2f}", f"{cpu_percent:.2f}")
-                    self.process_tree.insert(item, tk.END, text=str(child_pid), values=values) 
-                    
-            else:
-                tkinter.messagebox.showerror("Error", "No child processes found for this parent process.") 
-        else:
-            tkinter.messagebox.showerror("Error", "Selected process is not a parent process.") 
 
     def kill_process(self):
         selected_item = self.process_tree.selection()
@@ -144,19 +142,25 @@ class TaskManagerGUI:
             except psutil.AccessDenied:
                 tkinter.messagebox.showerror("Error", "Access denied. You may not have sufficient privileges.")
 
-    def is_parent_process(self, pid):
-        try:
-            process = psutil.Process(pid)
-            # Check if the process has children
-            if process.children():
-                return True
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
-        return False
-
     def is_system_process(self, pid):
         # Check if the process name is in a list of system processes
         system_processes = ["System", "Idle"]
+        process_name = self.get_process_name(pid)
+        if process_name in system_processes:
+            return True
+        return False
+    
+    def is_system_process(self, pid):
+        # Check if the process name is in a list of system processes
+        system_processes = ["None", "Idle"]
+        process_name = self.get_process_name(pid)
+        if process_name in system_processes:
+            return True
+        return False
+    
+    def is_unknown_process(self, pid):
+        # Check if the process name is in a list of system processes
+        system_processes = ["None", "Idle"]
         process_name = self.get_process_name(pid)
         if process_name in system_processes:
             return True
@@ -169,41 +173,30 @@ class TaskManagerGUI:
         return None
 
     def search_process(self):
-        search_text = self.search_entry.get().strip().lower()
-        self.process_tree.delete(*self.process_tree.get_children())  # Clear existing treeview
-
-        if not search_text:  # If search entry is empty, update processes without filtering
-            self.update_processes()
-            return
-
-        for proc in psutil.process_iter(['pid', 'name', 'username', 'status', 'memory_percent', 'cpu_percent']):
-            pid = proc.info['pid']
-            memory_percent = proc.info['memory_percent']
-            cpu_percent = proc.info['cpu_percent']
-
-            # Check if the process exists before accessing its properties
-            if psutil.pid_exists(pid):
-                process_name = proc.info['name']
-
-                # If the process name contains the search text, insert it into the treeview
-                if process_name.lower().startswith(search_text):
-                    username = proc.info['username']
-                    status = proc.info['status']
-                    values = (process_name, username, status, f"{memory_percent:.2f}", f"{cpu_percent:.2f}")
-                    self.process_tree.insert("", tk.END, text=str(pid), values=values)
-
-                # Update last known memory and CPU percentages
-                self.last_process_info[pid] = (memory_percent, cpu_percent)
+        search_text = self.search_entry.get().strip()
+        if search_text:
+            found = False
+            for item in self.process_tree.get_children():
+                name = self.process_tree.item(item, "values")[0]  # Get process name
+                if search_text.lower() in name.lower():  # Case insensitive search
+                    self.process_tree.selection_set(item)
+                    self.process_tree.focus(item)
+                    self.process_tree.see(item)
+                    found = True
+                    break
+            if not found:
+                tkinter.messagebox.showerror("Search Result", f"No process with name '{search_text}' found.")
 
     def schedule_update(self):
         self.update_processes()
         self.root.after(15000, self.schedule_update)  
-
+        
 def main():
     root = tk.Tk()
     root.geometry("800x600")
     TaskManagerGUI(root)
     root.mainloop()
+    style= ttk.Style()
 
 if __name__ == "__main__":
     main()
