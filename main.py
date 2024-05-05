@@ -66,6 +66,7 @@ class TaskManagerGUI:
         self.root.bind("<Control-r>", lambda event: self.update_processes())
 
         self.last_process_info = {}
+        self.expanded_items = set()  # Set to store expanded items
         self.update_processes()
         self.schedule_update()
 
@@ -76,6 +77,13 @@ class TaskManagerGUI:
         selected_pid = None
         if selected_item:
             selected_pid = int(self.process_tree.item(selected_item, "text"))
+        
+        self.expanded_items.clear()  # Clear the set before updating
+        
+        # Store expanded items
+        for item in self.process_tree.get_children(""):
+            if self.process_tree.item(item, "open"):
+                self.expanded_items.add(item)
         
         self.process_tree.delete(*self.process_tree.get_children())
         
@@ -102,6 +110,10 @@ class TaskManagerGUI:
                     self.process_tree.focus(item)
                     self.process_tree.see(item)
                     break
+        
+        # Expand previously expanded items
+        for item in self.expanded_items:
+            self.process_tree.item(item, open=True)
 
     def show_child_processes(self, event):
         threading.Thread(target=self.list_child_processes).start()
@@ -172,19 +184,27 @@ class TaskManagerGUI:
         return None
 
     def search_process(self):
-        search_text = self.search_entry.get().strip()
+        search_text = self.search_entry.get().strip().lower()
         if search_text:
-            found = False
-            for item in self.process_tree.get_children():
-                name = self.process_tree.item(item, "values")[0]
-                if search_text.lower() in name.lower():
-                    self.process_tree.selection_set(item)
-                    self.process_tree.focus(item)
-                    self.process_tree.see(item)
-                    found = True
-                    break
+            found = self.recursive_search_process("", search_text)
             if not found:
                 tkinter.messagebox.showerror("Search Result", f"No process with name '{search_text}' found.")
+
+    def recursive_search_process(self, parent_item, search_text):
+        found = False
+        for item in self.process_tree.get_children(parent_item):
+            name = self.process_tree.item(item, "values")[0].lower()
+            if search_text in name:
+                self.process_tree.selection_set(item)
+                self.process_tree.focus(item)
+                self.process_tree.see(item)
+                found = True
+                # If the search text is found, continue searching in child processes
+                found_child = self.recursive_search_process(item, search_text)
+                if found_child:
+                    found = True
+                    break
+        return found
 
     def schedule_update(self):
         self.update_processes()
